@@ -2,6 +2,7 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 var consoleTable = require("console.table");
+var util = require('util')
 // var other file = functions etc ?
 var dept = [];
 var managers = [];
@@ -29,7 +30,7 @@ connection.connect(function (err) {
     // connection.end();
     // console.log("connection ended.");
 });
-
+connection.query = util.promisify(connection.query)
 // function for first prompt/asks user what action they want to take
 function start() {
     inquirer
@@ -50,7 +51,7 @@ function start() {
             else if (answer.action === "Add Employee") {
                 addEmployee();
             }
-            else if (answer.action === "View Department") {
+            else if (answer.action === "View Departments") {
                 viewDepartment();
             }
             else if (answer.action === "View Roles") {
@@ -82,9 +83,9 @@ function addDepartment() {
         .then(function (answer) {
             // when finished prompting, insert new department into db
             connection.query(
-                "INSERT INTO department SET ?",
+                "INSERT INTO departments SET ?",
                 {
-                    name: answer.addingdept
+                    dept_name: answer.addingdept
                 },
                 function (err) {
                     if (err) throw err;
@@ -97,16 +98,16 @@ function addDepartment() {
 }
 // function for generating departments list
 function deptList() {
-    connection.query("SELECT id, dept_name FROM departments", function (err, res) {
-        if (err) throw err;
-        for (let i = 0; i < res.length; i++) {
-            dept.push(res[i].dept_name);
-        }
-    });
+    return connection.query("SELECT id, dept_name FROM departments");
 }
 // function to handle adding a new department
-function addRoles() {
-    deptList();
+async function addRoles() {
+    const dep = await deptList();
+    const depChoices = dep.map(({ id, dept_name }) => ({
+        name: dept_name,
+        value: id
+    }))
+
     inquirer
         .prompt([
             {
@@ -119,15 +120,12 @@ function addRoles() {
                 type: "input",
                 message: "What is the salary for the role you're adding?"
             },
-            //    dont need a role id prompt-- role id is auto generated mysql
-            // =======================NOT WORKING============= it's not jiving with dept id...
-            // {
-            //     name: "deptname",
-            //     type: "list",
-            //     message: "What department is this role part of?",
-            //     choices: dept
-            // }
-
+            {
+                name: "department",
+                type: "list",
+                message: "what department is this role in",
+                choices: depChoices
+            }
         ])
         .then(function (answer) {
             // when finished prompting, insert new role with following info
@@ -137,7 +135,7 @@ function addRoles() {
                 {
                     title: answer.title,
                     salary: answer.salary,
-                    // department_id: answer.deptname
+                    department_id: answer.department
                 },
                 function (err) {
                     if (err) throw err;
@@ -151,6 +149,7 @@ function addRoles() {
 
 // function for generating role id list
 function roleIdList() {
+    // MAP instead of loop MAKE ASYNC 
     connection.query("SELECT id, title FROM roles", function (err, res) {
         if (err) throw err;
         for (let i = 0; i < res.length; i++) {
@@ -160,6 +159,7 @@ function roleIdList() {
 }
 // function for generating manager id list
 function managerIdList() {
+    // MAP INSTEAD OF LOOP AND MAKE ASYNC
     connection.query("SELECT id, first_name, last_name FROM roles", function (err, res) {
         if (err) throw err;
         for (let i = 0; i < res.length; i++) {
@@ -171,8 +171,7 @@ function managerIdList() {
 
 function addEmployee() {
     roleIdList();
-    // managerIdList(); -----breaks code------
-    inquirer
+        inquirer
         .prompt([
             {
                 name: "firstname",
@@ -185,31 +184,17 @@ function addEmployee() {
                 message: "What is the employee's last name?"
             },
             {
+                // Go back and reformat for a list similar to the way adding depts is done
                 name: "roleid",
                 type: "input",
                 message: "Please enter their role id number."
             },
             {
+                // ^^same as listing depts--need to map
                 name: "managerid",
                 type: "input",
                 message: "Please enter their manager's id number."
             },
-            // =======DISPLAYS TITLE AND NUMBER CORRECTLY IN LIST BUT says id is undefined===
-            // {
-            //     name: "roleid",
-            //     type: "list",
-            //     message: "What is their role id number?",
-            //     choices: roleIds
-            // },
-            // {
-            //     name: "managerid",
-            //     type: "list",
-            //     message: "Who is their manager?",
-            //    choices: managers
-
-            // },
-
-
         ])
         .then(function (answer) {
             // when finished prompting, insert new role with following info
@@ -218,11 +203,10 @@ function addEmployee() {
                 {
                     first_name: answer.firstname,
                     last_name: answer.lastname,
+                    // role_id: ___ will have to change like in adding dpt
                     role_id: answer.roleid,
+                    // manager_id: ___ will have to change like in adding dpt
                     manager_id: answer.managerid,
-                    // 
-                    // role_id: answer.roleids.id,
-                    // manager_id: answer.managerid.id
                 },
                 function (err) {
                     if (err) throw err;
@@ -233,9 +217,8 @@ function addEmployee() {
             );
         });
 }
-// function to handle viewing departments
-// ======doesn't work==========no clue why=========
 function viewDepartment() {
+    console.log("here here")
     connection.query("SELECT * FROM departments", function (err, res) {
         if (err) throw err;
         console.table(res)
@@ -259,29 +242,4 @@ function viewEmployees() {
     });
 };
 
-
-
-
-    // function to handle viewing departments
-// function viewEmployees(){
-//     connection.query( "SELECT * FROM employees", function(err, res){
-//         if (err) throw err;
-//         console.log(`EMPLOYEES:`)
-//         res.forEach(employee => {
-//             console.log(`ID: ${employee.id} | Name: ${employee.first_name} ${employee.last_name} | Role ID: ${employee.role_id} | Manager ID: ${employee.manager_id}`);
-//         })
-//         start();
-//         });
-//     };    
-
-// function to handle viewing departments
-// function viewRoles(){
-//     connection.query( "SELECT * FROM roles", function(err, res){
-//         if (err) throw err;
-//         console.log(`EMPLOYEES:`)
-//         res.forEach(role => {
-//             console.log(`ID: ${role.id} | Name: ${role.title} ${role.salary} | Department ID: ${role.department_id}`);
-//         })
-//         start();
-//         });
-//     };  
+// LEFT TO DO: UPDATE EMP ROLES 
