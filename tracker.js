@@ -108,6 +108,7 @@ async function addRoles() {
         value: id
     }))
 
+
     inquirer
         .prompt([
             {
@@ -130,7 +131,7 @@ async function addRoles() {
         .then(function (answer) {
             // when finished prompting, insert new role with following info
             connection.query(
-                // let deptname = 
+
                 "INSERT INTO roles SET ?",
                 {
                     title: answer.title,
@@ -148,30 +149,47 @@ async function addRoles() {
 }
 
 // function for generating role id list
-function roleIdList() {
-    // MAP instead of loop MAKE ASYNC 
-    connection.query("SELECT id, title FROM roles", function (err, res) {
-        if (err) throw err;
-        for (let i = 0; i < res.length; i++) {
-            roleIds.push(res[i].id, res[i].title);
-        }
-    });
+function roleList() {
+    return connection.query("SELECT id, title FROM roles");
 }
+// function roleIdList() {
+// MAP instead of loop MAKE ASYNC 
+//     connection.query("SELECT id, title FROM roles", function (err, res) {
+//         if (err) throw err;
+//         for (let i = 0; i < res.length; i++) {
+//             roleIds.push(res[i].id, res[i].title);
+//         }
+//     });
+// }
 // function for generating manager id list
-function managerIdList() {
-    // MAP INSTEAD OF LOOP AND MAKE ASYNC
-    connection.query("SELECT id, first_name, last_name FROM roles", function (err, res) {
-        if (err) throw err;
-        for (let i = 0; i < res.length; i++) {
-            roleIds.push(res[i].id, res[i].first_name, res[i].last_name);
-        }
-    });
-
+function mgrList() {
+    return connection.query("SELECT id, first_name, last_name FROM employees");
 }
+// function managerIdList() {
+// MAP INSTEAD OF LOOP AND MAKE ASYNC
+//     connection.query("SELECT id, first_name, last_name FROM roles", function (err, res) {
+//         if (err) throw err;
+//         for (let i = 0; i < res.length; i++) {
+//             roleIds.push(res[i].id, res[i].first_name, res[i].last_name);
+//         }
+//     });
 
-function addEmployee() {
-    roleIdList();
-        inquirer
+// }
+async function addEmployee() {
+    const rol = await roleList();
+    const roleChoices = rol.map(({ id, title }) => ({
+        name: title,
+        value: id
+    }));
+    const mgr = await mgrList();
+    // only showing last name when list comes up....Also what about people who don't have managers?
+    const mgrChoices = mgr.map(({ id, first_name, last_name }) => ({
+        name: last_name,
+        value: id
+    }))
+    // function addEmployee() {
+    // roleIdList();
+    inquirer
         .prompt([
             {
                 name: "firstname",
@@ -186,14 +204,16 @@ function addEmployee() {
             {
                 // Go back and reformat for a list similar to the way adding depts is done
                 name: "roleid",
-                type: "input",
-                message: "Please enter their role id number."
+                type: "list",
+                message: "What is their role?",
+                choices: roleChoices
             },
             {
                 // ^^same as listing depts--need to map
                 name: "managerid",
-                type: "input",
-                message: "Please enter their manager's id number."
+                type: "list",
+                message: "Who is their manager?",
+                choices: mgrChoices
             },
         ])
         .then(function (answer) {
@@ -203,9 +223,7 @@ function addEmployee() {
                 {
                     first_name: answer.firstname,
                     last_name: answer.lastname,
-                    // role_id: ___ will have to change like in adding dpt
                     role_id: answer.roleid,
-                    // manager_id: ___ will have to change like in adding dpt
                     manager_id: answer.managerid,
                 },
                 function (err) {
@@ -242,4 +260,44 @@ function viewEmployees() {
     });
 };
 
-// LEFT TO DO: UPDATE EMP ROLES 
+// ===================doesn't work. not sure why =================
+async function updateRole() {
+    const emp = await empList();
+    const empChoices = emp.map(({ id, first_name }) => ({
+        name: first_name,
+        value: id
+    }));
+    // function addEmployee() {
+    // roleIdList();
+    inquirer
+        .prompt([
+            {
+                name: "employee",
+                type: "list",
+                message: "Which employee would you like to update?"
+            },
+            {
+
+                name: "newrole",
+                type: "list",
+                message: "What is their new role?",
+                choices: roleChoices
+            },
+        ])
+        .then(function (answer) {
+            // when finished prompting, insert new role with following info
+            connection.query(
+                "UPDATE employees SET ?",
+                {
+                    role_id: answer.newrole,
+                },
+                function (err) {
+                    if (err) throw err;
+                    console.log("Employee updated successfully!");
+                    // re-prompt if they would like to do something else
+                    start();
+                }
+            );
+        });
+    }
+
