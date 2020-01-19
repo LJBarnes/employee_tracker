@@ -60,7 +60,7 @@ function start() {
             else if (answer.action === "View Employees") {
                 viewEmployees();
             }
-            else if (answer.action === "Update EmployeeRole") {
+            else if (answer.action === "Update Employee Role") {
                 updateRole();
             }
             else {
@@ -152,29 +152,11 @@ async function addRoles() {
 function roleList() {
     return connection.query("SELECT id, title FROM roles");
 }
-// function roleIdList() {
-// MAP instead of loop MAKE ASYNC 
-//     connection.query("SELECT id, title FROM roles", function (err, res) {
-//         if (err) throw err;
-//         for (let i = 0; i < res.length; i++) {
-//             roleIds.push(res[i].id, res[i].title);
-//         }
-//     });
-// }
-// function for generating manager id list
+// function for generating managers list
 function mgrList() {
     return connection.query("SELECT id, first_name, last_name FROM employees");
 }
-// function managerIdList() {
-// MAP INSTEAD OF LOOP AND MAKE ASYNC
-//     connection.query("SELECT id, first_name, last_name FROM roles", function (err, res) {
-//         if (err) throw err;
-//         for (let i = 0; i < res.length; i++) {
-//             roleIds.push(res[i].id, res[i].first_name, res[i].last_name);
-//         }
-//     });
 
-// }
 async function addEmployee() {
     const rol = await roleList();
     const roleChoices = rol.map(({ id, title }) => ({
@@ -182,13 +164,10 @@ async function addEmployee() {
         value: id
     }));
     const mgr = await mgrList();
-    // only showing last name when list comes up....Also what about people who don't have managers?
     const mgrChoices = mgr.map(({ id, first_name, last_name }) => ({
-        name:  `${first_name} ${last_name}`,
+        name: `${first_name} ${last_name}`,
         value: id
     }))
-    // function addEmployee() {
-    // roleIdList();
     inquirer
         .prompt([
             {
@@ -202,14 +181,13 @@ async function addEmployee() {
                 message: "What is the employee's last name?"
             },
             {
-                // Go back and reformat for a list similar to the way adding depts is done
+               
                 name: "roleid",
                 type: "list",
                 message: "What is their role?",
                 choices: roleChoices
             },
             {
-                // ^^same as listing depts--need to map
                 name: "managerid",
                 type: "list",
                 message: "Who is their manager?",
@@ -260,14 +238,25 @@ function viewEmployees() {
     });
 };
 
-// ===================doesn't work. not sure why =================
+// function for generating employees list
+function empList() {
+    return connection.query("SELECT id, first_name, last_name FROM employees");
+}
+
+// ===================updateRole doesn't work. not sure why =================
 async function updateRole() {
     const emp = await empList();
     const empChoices = emp.map(({ id, first_name, last_name }) => ({
         name: `${first_name} ${last_name}`,
         value: id
+    }))
+    const rol = await roleList();
+    const roleChoices = rol.map(({ id, title }) => ({
+        name: title,
+        value: id
     }));
-      inquirer
+    console.log("got here.");
+    inquirer
         .prompt([
             {
                 name: "employee",
@@ -298,5 +287,5 @@ async function updateRole() {
                 }
             );
         });
-    }
+}
 
