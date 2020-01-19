@@ -184,7 +184,7 @@ async function addEmployee() {
     const mgr = await mgrList();
     // only showing last name when list comes up....Also what about people who don't have managers?
     const mgrChoices = mgr.map(({ id, first_name, last_name }) => ({
-        name: last_name,
+        name:  `${first_name} ${last_name}`,
         value: id
     }))
     // function addEmployee() {
@@ -263,18 +263,17 @@ function viewEmployees() {
 // ===================doesn't work. not sure why =================
 async function updateRole() {
     const emp = await empList();
-    const empChoices = emp.map(({ id, first_name }) => ({
-        name: first_name,
+    const empChoices = emp.map(({ id, first_name, last_name }) => ({
+        name: `${first_name} ${last_name}`,
         value: id
     }));
-    // function addEmployee() {
-    // roleIdList();
-    inquirer
+      inquirer
         .prompt([
             {
                 name: "employee",
                 type: "list",
-                message: "Which employee would you like to update?"
+                message: "Which employee would you like to update?",
+                choices: empChoices
             },
             {
 
